@@ -1,2 +1,0 @@
-# Ukelonn
-App for ukelønn
