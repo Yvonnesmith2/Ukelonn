@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Ukelønn</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ukelønn">
+<meta name="theme-color" content="#202B38">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EDEFE9;
+    --paper-raised:#F7F8F3;
+    --ink:#202B38;
+    --ink-soft:#5B6672;
+    --gold:#C79A3D;
+    --gold-deep:#9C7524;
+    --rust:#A8432E;
+    --sage:#5B7F5E;
+    --line:#C9CDBF;
+    --line-soft:#DBDED3;
+  }
+  *{box-sizing:border-box;}
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+    touch-action:manipulation;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:20px 16px 60px;}
+  button, input, select{ font-size:16px; } /* forhindrer auto-zoom på iPhone ved fokus */
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0;letter-spacing:0.01em;}
+  header.top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;border-bottom:2px solid var(--ink);padding-bottom:14px;}
+  header.top h1{font-size:26px;font-weight:700;}
+  header.top .tag{font-size:12.5px;color:var(--ink-soft);letter-spacing:0.04em;text-transform:uppercase;margin-top:4px;}
+  header.top .weeklabel{font-family:'Space Mono',monospace;font-size:13px;color:var(--ink-soft);text-align:right;}
+
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;align-items:center;}
+  .tab{
+    font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:14.5px;
+    padding:8px 16px;border:2px solid var(--ink);border-radius:2px;background:transparent;
+    cursor:pointer;color:var(--ink);
+  }
+  .tab.active{background:var(--ink);color:var(--paper-raised);}
+  .tab.addbtn{border-style:dashed;color:var(--ink-soft);border-color:var(--line);font-weight:400;}
+
+  .card{background:var(--paper-raised);border:1px solid var(--line);border-radius:3px;padding:18px;margin-bottom:18px;}
+  .card h3{font-size:15px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-soft);margin-bottom:12px;}
+
+  .chorecard{padding:12px 0;border-bottom:1px solid var(--line-soft);}
+  .chorecard .chorehead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px;gap:8px;}
+  .chorecard .choreheadleft{font-weight:500;font-size:14.5px;}
+  .chorecard .choreheadleft .kr{font-family:'Space Mono',monospace;color:var(--ink-soft);font-size:12px;margin-left:6px;font-weight:400;}
+  .chorecard .subtotal{font-family:'Space Mono',monospace;font-weight:700;color:var(--sage);font-size:14.5px;white-space:nowrap;}
+  .chips{display:flex;gap:5px;}
+  .chip{
+    flex:1;
+    aspect-ratio:1/1;
+    min-height:38px;
+    border:2px solid var(--line);
+    border-radius:6px;
+    background:var(--paper);
+    color:var(--ink-soft);
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:12.5px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none;
+    transition:background 0.1s, border-color 0.1s, color 0.1s;
+  }
+  .chip.on{
+    background:var(--gold);
+    border-color:var(--gold-deep);
+    color:var(--ink);
+  }
+
+  .totalbar{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);}
+  .totalbar .sum{font-family:'Space Mono',monospace;font-size:22px;font-weight:700;color:var(--ink);}
+  .totalbar .sumlabel{font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.05em;}
+
+  button{font-family:'Space Grotesk',sans-serif;cursor:pointer;}
+  .btn{
+    border:2px solid var(--ink);background:var(--ink);color:var(--paper-raised);
+    padding:10px 18px;border-radius:2px;font-weight:500;font-size:14px;
+  }
+  .btn.secondary{background:transparent;color:var(--ink);}
+  .btn.rust{background:var(--rust);border-color:var(--rust);}
+  .btn:disabled{opacity:0.35;cursor:not-allowed;}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+
+  .rowline{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+  .rowline input[type=text], .rowline input[type=number]{
+    font-family:'Inter',sans-serif;padding:8px 10px;border:1px solid var(--line);border-radius:2px;
+    background:var(--paper);color:var(--ink);font-size:14px;
+  }
+  .rowline input[type=text]{flex:1;min-width:100px;}
+  .rowline input[type=number]{width:90px;}
+  .chorerow{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line-soft);font-size:14px;}
+  .chorerow .kr{font-family:'Space Mono',monospace;color:var(--ink-soft);margin:0 10px;}
+  .del{background:none;border:none;color:var(--rust);font-size:13px;text-decoration:underline;}
+  .empty{color:var(--ink-soft);font-size:14px;font-style:italic;}
+
+  /* Payslip / receipt */
+  .payslip{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-top:3px solid var(--gold-deep);
+    position:relative;
+    padding:22px 20px 26px;
+    font-family:'Space Mono',monospace;
+    margin-bottom:18px;
+  }
+  .payslip::before{
+    content:"";
+    position:absolute;top:-1px;left:0;right:0;height:0;
+    background-image:radial-gradient(circle, var(--paper) 3px, transparent 3.5px);
+    background-size:14px 8px;
+    background-position:0 -4px;
+  }
+  .payslip h3{font-family:'Space Grotesk',sans-serif;text-transform:uppercase;font-size:14px;letter-spacing:0.06em;color:var(--ink-soft);margin-bottom:2px;}
+  .payslip .stamp{
+    position:absolute;top:16px;right:18px;
+    border:2px solid var(--sage);color:var(--sage);
+    padding:4px 10px;font-weight:700;font-size:12px;letter-spacing:0.08em;
+    transform:rotate(-8deg);border-radius:3px;
+  }
+  .payslip .line{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px dotted var(--line);}
+  .payslip .line span:first-child{color:var(--ink-soft);}
+  .payslip .grand{display:flex;justify-content:space-between;font-size:18px;font-weight:700;padding-top:10px;margin-top:6px;border-top:1px solid var(--ink);}
+
+  .histitem{border-bottom:1px solid var(--line-soft);padding:10px 0;font-size:14px;}
+  .histitem .hrow{display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+  .histitem .hrow .amt{font-family:'Space Mono',monospace;font-weight:700;color:var(--sage);}
+  .histbreak{margin-top:8px;font-size:13px;color:var(--ink-soft);display:none;}
+  .histbreak.open{display:block;}
+  .histbreak div{display:flex;justify-content:space-between;padding:2px 0;font-family:'Space Mono',monospace;font-size:12.5px;}
+
+  select{font-family:'Inter',sans-serif;padding:8px 10px;border:1px solid var(--line);border-radius:2px;background:var(--paper);color:var(--ink);}
+  .muted{color:var(--ink-soft);font-size:13px;}
+  @media (max-width:480px){
+    header.top{flex-direction:column;align-items:flex-start;gap:6px;}
+    header.top .weeklabel{text-align:left;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Ukelønn</h1>
+      <div class="tag">Stemplingskort for hjemmearbeid</div>
+    </div>
+    <div class="weeklabel" id="weekLabel"></div>
+  </header>
+
+  <div class="tabs" id="kidTabs"></div>
+
+  <div id="mainArea"></div>
+
+  <div class="card" id="choreCard">
+    <h3>Oppgaver &amp; verdi</h3>
+    <div id="choreList"></div>
+    <div class="rowline" style="margin-top:10px;">
+      <input type="text" id="newChoreName" placeholder="Ny oppgave, f.eks. Tømme oppvaskmaskin">
+      <input type="number" id="newChoreValue" placeholder="kr" min="0" step="1">
+      <button class="btn secondary" id="addChoreBtn">Legg til</button>
+    </div>
+  </div>
+
+  <div class="card" id="historyCard">
+    <h3>Tidligere lønnsslipper</h3>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<!-- Firebase: gir oss en delt database i skyen slik at flere enheter ser samme data -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const DAYS = ["Man","Tir","Ons","Tor","Fre","Lør","Søn"];
+let data = null;
+let activeKid = null;
+let openHist = null;
+let docRef = null;
+
+// ============================================================
+// BYTT UT OBJEKTET UNDER MED DITT EGET FRA FIREBASE (steg 3).
+// Det skal se ut som dette, bare med dine egne verdier:
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyBEyojtD05zws-osoqWuInW07enW-I51H0",
+  authDomain: "ukelonn-db96d.firebaseapp.com",
+  projectId: "ukelonn-db96d",
+  storageBucket: "ukelonn-db96d.firebasestorage.app",
+  messagingSenderId: "90472772332",
+  appId: "1:90472772332:web:9eaa8709af29a6b08cebc9",
+  measurementId: "G-9CYSJFK9YL"
+};
+
+function uid(){ return Math.random().toString(36).slice(2,10); }
+
+function defaultData(){
+  return {
+    kids: [],
+    chores: [
+      {id:uid(), name:"Rydde eget rom", value:20},
+      {id:uid(), name:"Tømme oppvaskmaskin", value:15},
+      {id:uid(), name:"Ta ut søppel", value:10},
+      {id:uid(), name:"Dekke/rydde bord til middag", value:10}
+    ],
+    week: {},
+    history: []
+  };
+}
+
+// Kobler til Firebase og lytter på databasen i sanntid. Hver gang NOEN
+// (deg eller datteren din) lagrer en endring, kjører denne funksjonen på
+// nytt automatisk på ALLE åpne enheter, og skjermen oppdateres.
+function initFirebase(){
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  docRef = db.collection('ukelonn-app').doc('shared-data');
+
+  docRef.onSnapshot((snap)=>{
+    if(snap.exists){
+      data = snap.data();
+    } else {
+      data = defaultData();
+      docRef.set(data); // første gang: oppretter dokumentet i databasen
+    }
+    if(!data.kids) data.kids = [];
+    if(!data.chores) data.chores = [];
+    if(!data.week) data.week = {};
+    if(!data.history) data.history = [];
+    if(data.kids.length && !activeKid) activeKid = data.kids[0].id;
+    render();
+  }, (err)=>{
+    console.error('Kunne ikke koble til databasen', err);
+    alert('Kunne ikke koble til databasen. Sjekk at firebaseConfig er riktig fylt ut, og at reglene i Firestore er publisert.');
+  });
+}
+
+async function save(){
+  try{
+    await docRef.set(data);
+  }catch(e){
+    console.error('Lagring feilet', e);
+  }
+}
+
+function weekLabelText(){
+  const d = new Date();
+  const jan1 = new Date(d.getFullYear(),0,1);
+  const week = Math.ceil((((d - jan1) / 86400000) + jan1.getDay()+1)/7);
+  return "Uke " + week + " · " + d.getFullYear();
+}
+
+function ensureKidWeek(kidId){
+  if(!data.week[kidId]) data.week[kidId] = {};
+  data.chores.forEach(c=>{
+    if(!data.week[kidId][c.id]) data.week[kidId][c.id] = [false,false,false,false,false,false,false];
+  });
+}
+
+function kidTotal(kidId){
+  ensureKidWeek(kidId);
+  let total = 0;
+  data.chores.forEach(c=>{
+    const checks = data.week[kidId][c.id] || [];
+    total += checks.filter(Boolean).length * (c.value||0);
+  });
+  return total;
+}
+
+function render(){
+  document.getElementById('weekLabel').textContent = weekLabelText();
+  renderTabs();
+  renderMain();
+  renderChores();
+  renderHistory();
+}
+
+function renderTabs(){
+  const el = document.getElementById('kidTabs');
+  el.innerHTML = '';
+  data.kids.forEach(k=>{
+    const b = document.createElement('button');
+    b.className = 'tab' + (k.id===activeKid ? ' active':'');
+    b.textContent = k.name;
+    b.onclick = ()=>{ activeKid = k.id; render(); };
+    el.appendChild(b);
+  });
+  const add = document.createElement('button');
+  add.className = 'tab addbtn';
+  add.textContent = '+ Legg til ungdom';
+  add.onclick = addKid;
+  el.appendChild(add);
+}
+
+async function addKid(){
+  const name = prompt('Navn på ungdommen:');
+  if(!name || !name.trim()) return;
+  const k = {id:uid(), name:name.trim()};
+  data.kids.push(k);
+  ensureKidWeek(k.id);
+  activeKid = k.id;
+  await save();
+  render();
+}
+
+async function removeKid(kidId){
+  if(!confirm('Fjerne denne personen, uken deres og historikken? Dette kan ikke angres.')) return;
+  data.kids = data.kids.filter(k=>k.id!==kidId);
+  delete data.week[kidId];
+  data.history = data.history.filter(h=>h.kidId!==kidId);
+  if(activeKid===kidId) activeKid = data.kids[0] ? data.kids[0].id : null;
+  await save();
+  render();
+}
+
+function renderMain(){
+  const el = document.getElementById('mainArea');
+  el.innerHTML = '';
+
+  if(!data.kids.length){
+    el.innerHTML = '<div class="card"><p class="empty">Ingen ungdommer lagt til enda. Trykk «+ Legg til ungdom» for å komme i gang.</p></div>';
+    return;
+  }
+  const kid = data.kids.find(k=>k.id===activeKid);
+  if(!kid) return;
+  ensureKidWeek(kid.id);
+
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const head = document.createElement('div');
+  head.style.display='flex';
+  head.style.justifyContent='space-between';
+  head.style.alignItems='center';
+  head.innerHTML = '<h3 style="margin:0;">'+escapeHtml(kid.name)+'s stemplingskort</h3>';
+  const rm = document.createElement('button');
+  rm.className='del';
+  rm.textContent='Fjern person';
+  rm.onclick = ()=>removeKid(kid.id);
+  head.appendChild(rm);
+  card.appendChild(head);
+  card.style.marginTop = '4px';
+
+  if(!data.chores.length){
+    card.innerHTML += '<p class="empty" style="margin-top:12px;">Legg til noen oppgaver nedenfor først.</p>';
+    el.appendChild(card);
+    return;
+  }
+
+  const list = document.createElement('div');
+  data.chores.forEach(c=>{
+    const checks = data.week[kid.id][c.id];
+    const row = document.createElement('div');
+    row.className = 'chorecard';
+
+    const head = document.createElement('div');
+    head.className = 'chorehead';
+    head.innerHTML = '<div class="choreheadleft">'+escapeHtml(c.name)+'<span class="kr">'+c.value+' kr/gang</span></div>'+
+      '<div class="subtotal">'+(checks.filter(Boolean).length * c.value)+' kr</div>';
+    row.appendChild(head);
+
+    const chips = document.createElement('div');
+    chips.className = 'chips';
+    DAYS.forEach((d,i)=>{
+      const chip = document.createElement('div');
+      chip.className = 'chip' + (checks[i] ? ' on' : '');
+      chip.textContent = d.slice(0,2);
+      chip.onclick = async ()=>{
+        checks[i] = !checks[i];
+        await save();
+        renderMain();
+      };
+      chips.appendChild(chip);
+    });
+    row.appendChild(chips);
+    list.appendChild(row);
+  });
+  card.appendChild(list);
+
+  const total = kidTotal(kid.id);
+  const bar = document.createElement('div');
+  bar.className = 'totalbar';
+  bar.innerHTML = '<div><div class="sumlabel">Denne uken</div><div class="sum">'+total+' kr</div></div>';
+  const payBtn = document.createElement('button');
+  payBtn.className = 'btn';
+  payBtn.textContent = 'Utbetal uken';
+  payBtn.disabled = total===0;
+  payBtn.onclick = ()=>payout(kid.id);
+  bar.appendChild(payBtn);
+  card.appendChild(bar);
+
+  el.appendChild(card);
+}
+
+async function payout(kidId){
+  const kid = data.kids.find(k=>k.id===kidId);
+  ensureKidWeek(kidId);
+  const breakdown = data.chores.map(c=>{
+    const checks = data.week[kidId][c.id];
+    const count = checks.filter(Boolean).length;
+    return {name:c.name, count, value:c.value, subtotal: count*c.value};
+  }).filter(b=>b.count>0);
+  const total = breakdown.reduce((s,b)=>s+b.subtotal,0);
+  if(total===0) return;
+
+  const entry = {
+    id: uid(),
+    kidId,
+    kidName: kid.name,
+    weekLabel: weekLabelText(),
+    date: new Date().toLocaleDateString('no-NO'),
+    total,
+    breakdown
+  };
+  data.history.unshift(entry);
+
+  data.chores.forEach(c=>{
+    data.week[kidId][c.id] = [false,false,false,false,false,false,false];
+  });
+
+  await save();
+  render();
+  showPayslip(entry);
+}
+
+function showPayslip(entry){
+  const el = document.getElementById('mainArea');
+  const slip = document.createElement('div');
+  slip.className = 'payslip';
+  let lines = '';
+  entry.breakdown.forEach(b=>{
+    lines += '<div class="line"><span>'+escapeHtml(b.name)+' ×'+b.count+'</span><span>'+b.subtotal+' kr</span></div>';
+  });
+  slip.innerHTML =
+    '<div class="stamp">BETALT</div>'+
+    '<h3>Lønnsslipp</h3>'+
+    '<div class="muted" style="margin-bottom:10px;">'+escapeHtml(entry.kidName)+' · '+entry.weekLabel+' · '+entry.date+'</div>'+
+    lines +
+    '<div class="grand"><span>Til utbetaling</span><span>'+entry.total+' kr</span></div>';
+  el.prepend(slip);
+}
+
+function renderChores(){
+  const el = document.getElementById('choreList');
+  el.innerHTML = '';
+  if(!data.chores.length){
+    el.innerHTML = '<p class="empty">Ingen oppgaver enda.</p>';
+  }
+  data.chores.forEach(c=>{
+    const row = document.createElement('div');
+    row.className = 'chorerow';
+    row.innerHTML = '<span>'+escapeHtml(c.name)+'</span>';
+    const right = document.createElement('span');
+    right.innerHTML = '<span class="kr">'+c.value+' kr/gang</span>';
+    const del = document.createElement('button');
+    del.className='del';
+    del.textContent='Fjern';
+    del.onclick = async ()=>{
+      if(!confirm('Fjerne oppgaven «'+c.name+'» for alle?')) return;
+      data.chores = data.chores.filter(x=>x.id!==c.id);
+      Object.values(data.week).forEach(w=>{ delete w[c.id]; });
+      await save();
+      render();
+    };
+    right.appendChild(del);
+    row.appendChild(right);
+    el.appendChild(row);
+  });
+}
+
+document.getElementById('addChoreBtn').onclick = async ()=>{
+  const nameEl = document.getElementById('newChoreName');
+  const valEl = document.getElementById('newChoreValue');
+  const name = nameEl.value.trim();
+  const value = parseInt(valEl.value,10);
+  if(!name || isNaN(value) || value<0){
+    alert('Skriv inn et navn og en verdi i kroner.');
+    return;
+  }
+  data.chores.push({id:uid(), name, value});
+  nameEl.value=''; valEl.value='';
+  await save();
+  render();
+};
+
+function renderHistory(){
+  const el = document.getElementById('historyList');
+  el.innerHTML = '';
+  if(!data.history.length){
+    el.innerHTML = '<p class="empty">Ingen utbetalinger enda.</p>';
+    return;
+  }
+  data.history.forEach(h=>{
+    const item = document.createElement('div');
+    item.className = 'histitem';
+    const row = document.createElement('div');
+    row.className = 'hrow';
+    row.innerHTML = '<span>'+escapeHtml(h.kidName)+' · '+h.weekLabel+' <span class="muted">('+h.date+')</span></span><span class="amt">'+h.total+' kr</span>';
+    const brk = document.createElement('div');
+    brk.className = 'histbreak' + (openHist===h.id?' open':'');
+    h.breakdown.forEach(b=>{
+      brk.innerHTML += '<div><span>'+escapeHtml(b.name)+' ×'+b.count+'</span><span>'+b.subtotal+' kr</span></div>';
+    });
+    row.onclick = ()=>{ openHist = (openHist===h.id) ? null : h.id; renderHistory(); };
+    item.appendChild(row);
+    item.appendChild(brk);
+    el.appendChild(item);
+  });
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+initFirebase();
+</script>
+</body>
+</html>
