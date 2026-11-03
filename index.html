@@ -37,7 +37,7 @@
     touch-action:manipulation;
   }
   .wrap{max-width:760px;margin:0 auto;padding:20px 16px 60px;}
-  button, input, select{ font-size:16px; } /* forhindrer auto-zoom på iPhone ved fokus */
+  button, input, select{ font-size:16px; }
   h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0;letter-spacing:0.01em;}
   header.top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;border-bottom:2px solid var(--ink);padding-bottom:14px;}
   header.top h1{font-size:26px;font-weight:700;}
@@ -111,6 +111,10 @@
   .del{background:none;border:none;color:var(--rust);font-size:13px;text-decoration:underline;}
   .empty{color:var(--ink-soft);font-size:14px;font-style:italic;}
 
+  .notifybox{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+  .notifybox .status{font-size:13px;color:var(--ink-soft);}
+  .notifybox .status.on{color:var(--sage);font-weight:600;}
+
   /* Payslip / receipt */
   .payslip{
     background:var(--paper-raised);
@@ -168,6 +172,17 @@
 
   <div id="mainArea"></div>
 
+  <div class="card" id="notifyCard">
+    <h3>Varsler</h3>
+    <div class="notifybox">
+      <div>
+        <div>Få et varsel på denne telefonen når noen krysser av en oppgave.</div>
+        <div class="status" id="notifyStatus">Av på denne enheten</div>
+      </div>
+      <button class="btn secondary" id="notifyBtn">Skru på varsler</button>
+    </div>
+  </div>
+
   <div class="card" id="choreCard">
     <h3>Oppgaver &amp; verdi</h3>
     <div id="choreList"></div>
@@ -187,6 +202,7 @@
 <!-- Firebase: gir oss en delt database i skyen slik at flere enheter ser samme data -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <script>
 const DAYS = ["Man","Tir","Ons","Tor","Fre","Lør","Søn"];
 let data = null;
@@ -195,18 +211,24 @@ let openHist = null;
 let docRef = null;
 
 // ============================================================
-// BYTT UT OBJEKTET UNDER MED DITT EGET FRA FIREBASE (steg 3).
-// Det skal se ut som dette, bare med dine egne verdier:
+// Firebase-oppsettet ditt (fra Firebase-konsollen).
 // ============================================================
 const firebaseConfig = {
-  apiKey: "AIzaSyBEyojtD05zws-osoqWuInW07enW-I51H0",
-  authDomain: "ukelonn-db96d.firebaseapp.com",
-  projectId: "ukelonn-db96d",
-  storageBucket: "ukelonn-db96d.firebasestorage.app",
-  messagingSenderId: "90472772332",
-  appId: "1:90472772332:web:9eaa8709af29a6b08cebc9",
-  measurementId: "G-9CYSJFK9YL"
+  apiKey: "AIzaSyBEyojtD05zws-osoqWuInW07enW-I51H0",
+  authDomain: "ukelonn-db96d.firebaseapp.com",
+  projectId: "ukelonn-db96d",
+  storageBucket: "ukelonn-db96d.firebasestorage.app",
+  messagingSenderId: "90472772332",
+  appId: "1:90472772332:web:9eaa8709af29a6b08cebc9",
+  measurementId: "G-9CYSJFK9YL"
 };
+
+// ============================================================
+// LIM INN DIN EGEN VAPID-NØKKEL HER (steg 2 i instruksjonene).
+// Finnes i Firebase-konsollen under:
+// Project settings -> Cloud Messaging -> Web configuration -> Web Push certificates
+// ============================================================
+const VAPID_KEY = "BO2Pjjp9vgGEUFrPZs-5fYlqndWOgtQokX8I5AGfXKHMgiTedPhtOR8_NQ9uMjujOrmF_gqPQmS3bq2SYtiB5DU";
 
 function uid(){ return Math.random().toString(36).slice(2,10); }
 
@@ -220,13 +242,11 @@ function defaultData(){
       {id:uid(), name:"Dekke/rydde bord til middag", value:10}
     ],
     week: {},
-    history: []
+    history: [],
+    parentTokens: []
   };
 }
 
-// Kobler til Firebase og lytter på databasen i sanntid. Hver gang NOEN
-// (deg eller datteren din) lagrer en endring, kjører denne funksjonen på
-// nytt automatisk på ALLE åpne enheter, og skjermen oppdateres.
 function initFirebase(){
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
@@ -237,12 +257,13 @@ function initFirebase(){
       data = snap.data();
     } else {
       data = defaultData();
-      docRef.set(data); // første gang: oppretter dokumentet i databasen
+      docRef.set(data);
     }
     if(!data.kids) data.kids = [];
     if(!data.chores) data.chores = [];
     if(!data.week) data.week = {};
     if(!data.history) data.history = [];
+    if(!data.parentTokens) data.parentTokens = [];
     if(data.kids.length && !activeKid) activeKid = data.kids[0].id;
     render();
   }, (err)=>{
@@ -258,6 +279,58 @@ async function save(){
     console.error('Lagring feilet', e);
   }
 }
+
+// ---------- Varsler ----------
+function notificationsEnabledHere(){
+  return localStorage.getItem('ukelonn-notify-token') ? true : false;
+}
+
+async function enableNotifications(){
+  if(!('Notification' in window) || !('serviceWorker' in navigator)){
+    alert('Denne nettleseren støtter ikke varsler. På iPhone må siden være lagt til på Hjem-skjerm og du må bruke iOS 16.4 eller nyere.');
+    return;
+  }
+  try{
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted'){
+      alert('Du må tillate varsler for at dette skal fungere.');
+      return;
+    }
+    const swReg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+    const messaging = firebase.messaging();
+    const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+    if(!token){
+      alert('Fikk ikke en varslings-ID. Prøv igjen om litt.');
+      return;
+    }
+    await docRef.update({
+      parentTokens: firebase.firestore.FieldValue.arrayUnion(token)
+    });
+    localStorage.setItem('ukelonn-notify-token', token);
+    renderNotifyBox();
+    alert('Varsler er skrudd på for denne telefonen!');
+  }catch(e){
+    console.error(e);
+    alert('Noe gikk galt med varslingsoppsettet: ' + e.message);
+  }
+}
+
+function renderNotifyBox(){
+  const statusEl = document.getElementById('notifyStatus');
+  const btn = document.getElementById('notifyBtn');
+  if(notificationsEnabledHere()){
+    statusEl.textContent = 'På for denne enheten';
+    statusEl.className = 'status on';
+    btn.textContent = 'Varsler er på';
+    btn.disabled = true;
+  } else {
+    statusEl.textContent = 'Av på denne enheten';
+    statusEl.className = 'status';
+    btn.textContent = 'Skru på varsler';
+    btn.disabled = false;
+  }
+}
+document.getElementById('notifyBtn').onclick = enableNotifications;
 
 function weekLabelText(){
   const d = new Date();
@@ -289,6 +362,7 @@ function render(){
   renderMain();
   renderChores();
   renderHistory();
+  renderNotifyBox();
 }
 
 function renderTabs(){
@@ -369,11 +443,11 @@ function renderMain(){
     const row = document.createElement('div');
     row.className = 'chorecard';
 
-    const head = document.createElement('div');
-    head.className = 'chorehead';
-    head.innerHTML = '<div class="choreheadleft">'+escapeHtml(c.name)+'<span class="kr">'+c.value+' kr/gang</span></div>'+
+    const head2 = document.createElement('div');
+    head2.className = 'chorehead';
+    head2.innerHTML = '<div class="choreheadleft">'+escapeHtml(c.name)+'<span class="kr">'+c.value+' kr/gang</span></div>'+
       '<div class="subtotal">'+(checks.filter(Boolean).length * c.value)+' kr</div>';
-    row.appendChild(head);
+    row.appendChild(head2);
 
     const chips = document.createElement('div');
     chips.className = 'chips';
